@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>E-Book Unlock</title>
+
+  <style>
+    body{
+      margin:0;
+      padding:0;
+      background:#0f0f0f;
+      font-family:Arial, sans-serif;
+      color:white;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+    }
+
+    .box{
+      width:350px;
+      background:#1a1a1a;
+      padding:25px;
+      border-radius:15px;
+      text-align:center;
+      box-shadow:0 0 20px rgba(255,0,0,0.2);
+    }
+
+    h1{
+      color:red;
+      margin-bottom:10px;
+    }
+
+    p{
+      color:#ccc;
+      font-size:14px;
+    }
+
+    img{
+      width:220px;
+      margin:15px 0;
+      border-radius:10px;
+    }
+
+    input{
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border:none;
+      border-radius:8px;
+      outline:none;
+      font-size:16px;
+    }
+
+    button{
+      width:100%;
+      padding:12px;
+      margin-top:15px;
+      background:red;
+      color:white;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:16px;
+      font-weight:bold;
+    }
+
+    button:hover{
+      background:darkred;
+    }
+
+    #message{
+      margin-top:15px;
+      font-weight:bold;
+    }
+
+    .hidden{
+      display:none;
+    }
+
+    iframe{
+      width:100%;
+      height:500px;
+      border:none;
+      margin-top:20px;
+      border-radius:10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+
+  <h1>Unlock E-Book</h1>
+
+  <p>
+    Scan QR and send payment.<br>
+    After payment enter transaction ID.
+  </p>
+
+  <!-- YOUR QR -->
+  <img src="qr.png" alt="QR Code">
+
+  <!-- USER ENTERS TRANSACTION ID -->
+  <input type="text" id="txn" placeholder="Enter eSewa Transaction ID">
+
+  <button onclick="checkPayment()">
+    Verify Payment
+  </button>
+
+  <div id="message"></div>
+
+  <!-- PDF OPENS HERE -->
+  <div id="ebook" class="hidden">
+    <iframe src="ebook.pdf"></iframe>
+  </div>
+
+</div>
+
+<script>
+
+  // ADD REAL TRANSACTION IDS HERE
+  const validTransactions = [
+    "ES12345",
+    "PAY999",
+    "TXN555"
+  ];
+
+  function checkPayment(){
+
+    let txn = document.getElementById("txn").value.trim();
+
+    if(validTransactions.includes(txn)){
+
+      document.getElementById("message").innerHTML =
+      "✅ Payment Verified. E-Book Unlocked.";
+
+      document.getElementById("ebook").classList.remove("hidden");
+
+    }else{
+
+      document.getElementById("message").innerHTML =
+      "❌ Invalid Payment Transaction ID.";
+
+    }
+  }
+
+</script>
+
+</body>
+</html>
