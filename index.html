@@ -1,0 +1,248 @@
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzCEdWuVpFNquQKnyhEWVzD6XqYUPsoxW0rc9rZj3_T2-blHWvxD9HcOO7a9IThaWBOzg/exec";
+const STORAGE_KEY = "ebook_access";
+
+let currentPhone = "";
+let currentTxn = "";
+
+window.addEventListener("load", function () {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("action") === "approve") {
+    approveFromEmail(params.get("phone"), params.get("txn"));
+    return;
+  }
+
+  const saved = getSavedAccess();
+  if (saved && saved.approved && saved.phone && saved.txn) {
+    addReturnUserButton();
+  }
+});
+
+function getSavedAccess() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY));
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveAccess(phone, txn) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    approved: true,
+    phone: phone,
+    txn: txn,
+    time: new Date().toISOString()
+  }));
+}
+
+function addReturnUserButton() {
+  if (document.getElementById("returnUserBtn")) return;
+
+  const btn = document.createElement("button");
+  btn.id = "returnUserBtn";
+  btn.className = "btn-esewa";
+  btn.style = "margin-top:1rem;";
+  btn.innerHTML = "Access Your Files";
+  btn.onclick = function () {
+    const saved = getSavedAccess();
+    currentPhone = saved.phone;
+    currentTxn = saved.txn;
+    openModal();
+    setTimeout(function () {
+      showStep4(saved.phone, saved.txn);
+    }, 100);
+  };
+
+  const priceBlock = document.querySelector(".price-block");
+  if (priceBlock) priceBlock.after(btn);
+}
+
+async function approveFromEmail(phone, txn) {
+  document.body.innerHTML = "<div style='font-family:Arial;text-align:center;padding:60px 20px;background:#0a0608;min-height:100vh;color:#fff;'><h2>Approving...</h2></div>";
+
+  try {
+    await fetch(
+      SCRIPT_URL +
+      "?action=approve&phone=" + encodeURIComponent(phone || "") +
+      "&txn=" + encodeURIComponent(txn || ""),
+      { redirect: "follow" }
+    );
+
+    document.body.innerHTML = "<div style='font-family:Arial;text-align:center;padding:60px 20px;background:#0a0608;min-height:100vh;color:#fff;'><div style='max-width:400px;margin:0 auto;background:#1a1a2e;padding:40px;border-radius:12px;border:2px solid #27ae60;'><div style='font-size:60px;'>✅</div><h2 style='color:#27ae60;'>Access Granted!</h2><p style='color:#9a8870;'>Customer can now download files.</p><p style='color:#555;font-size:14px;margin-top:16px;'>You can close this page.</p></div></div>";
+  } catch (e) {
+    document.body.innerHTML = "<div style='font-family:Arial;text-align:center;padding:60px;background:#0a0608;min-height:100vh;color:#fff;'><h2 style='color:#e74c3c;'>Error. Try again.</h2></div>";
+  }
+}
+
+function openModal() {
+  document.getElementById("overlay").classList.add("active");
+  showStep1();
+}
+
+function closeModal() {
+  document.getElementById("overlay").classList.remove("active");
+}
+
+function closeOutside(e) {
+  if (e.target === document.getElementById("overlay")) closeModal();
+}
+
+function hide(id) {
+  document.getElementById(id).style.display = "none";
+}
+
+function show(id) {
+  document.getElementById(id).style.display = "block";
+}
+
+function showStep1() {
+  show("step1");
+  hide("step2");
+  hide("step3");
+  hide("step4");
+}
+
+function showStep2() {
+  hide("step1");
+  show("step2");
+  hide("step3");
+  hide("step4");
+  document.getElementById("phoneInput").focus();
+}
+
+function showStep3() {
+  hide("step1");
+  hide("step2");
+  show("step3");
+  hide("step4");
+}
+
+function showStep4(phone, txn) {
+  hide("step1");
+  hide("step2");
+  hide("step3");
+  show("step4");
+
+  if (phone && txn) {
+    saveAccess(phone, txn);
+    addReturnUserButton();
+  }
+}
+
+async function submitPayment() {
+  const phone = document.getElementById("phoneInput").value.trim();
+  const txn = document.getElementById("txnInput").value.trim().toUpperCase();
+  const err = document.getElementById("submitErr");
+  const btn = document.getElementById("submitBtn");
+
+  err.style.display = "none";
+
+  if (!/^9[6-9][0-9]{8}$/.test(phone)) {
+    err.textContent = "Valid eSewa number halnus: 98XXXXXXXX";
+    err.style.display = "block";
+    return;
+  }
+
+  if (!/^[A-Z0-9]{5,25}$/.test(txn)) {
+    err.textContent = "Valid Transaction ID halnus";
+    err.style.display = "block";
+    return;
+  }
+
+  currentPhone = phone;
+  currentTxn = txn;
+
+  btn.disabled = true;
+  btn.textContent = "Submitting...";
+
+  try {
+    const res = await fetch(
+      SCRIPT_URL +
+      "?action=submit&phone=" + encodeURIComponent(phone) +
+      "&txn=" + encodeURIComponent(txn) +
+      "&amount=10",
+      { redirect: "follow" }
+    );
+
+    const data = await res.json();
+
+    if (data.status === "APPROVED") {
+      showStep4(phone, txn);
+      return;
+    }
+  } catch (e) {}
+
+  document.getElementById("checkTxn").value = txn;
+  btn.disabled = false;
+  btn.textContent = "Submit for Verification";
+  showStep3();
+}
+
+async function checkStatus() {
+  const txn = document.getElementById("checkTxn").value.trim().toUpperCase();
+  const btn = document.getElementById("checkBtn");
+  const err = document.getElementById("checkErr");
+
+  err.style.display = "none";
+
+  if (!currentPhone) {
+    const saved = getSavedAccess();
+    if (saved && saved.phone) currentPhone = saved.phone;
+  }
+
+  if (!currentPhone || !txn) {
+    err.textContent = "Phone ra Transaction ID required cha";
+    err.style.display = "block";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Checking...";
+
+  try {
+    const res = await fetch(
+      SCRIPT_URL +
+      "?action=check&phone=" + encodeURIComponent(currentPhone) +
+      "&txn=" + encodeURIComponent(txn),
+      { redirect: "follow" }
+    );
+
+    const data = await res.json();
+
+    if (data.status === "APPROVED") {
+      showStep4(currentPhone, txn);
+      return;
+    }
+  } catch (e) {}
+
+  btn.disabled = false;
+  btn.textContent = "Check & Get My Files";
+  err.textContent = "Payment not approved yet. Please try again after seller approval.";
+  err.style.display = "block";
+}
+
+function downloadPDF() {
+  window.open("https://docs.google.com/document/d/1AHYvj5S0aEpIjQ3TphoBfTOdXQZB7UD9uW_PPT0pqqg/export?format=pdf", "_blank");
+}
+
+function downloadAudio() {
+  window.open("https://www.dropbox.com/scl/fi/vs6f38hvqh24w1we1axx6/8-Female-Psychology.mp3?rlkey=l37o7re1sig5hfu1ysjkgcx7c&st=l5i9jvjv&dl=1", "_blank");
+}
+
+const heroRight = document.querySelector(".hero-right");
+const scene = document.querySelector(".scene");
+
+if (heroRight && scene) {
+  heroRight.addEventListener("mousemove", function (e) {
+    const r = heroRight.getBoundingClientRect();
+    scene.style.transform =
+      "rotateY(" + (((e.clientX - r.left) / r.width - 0.5) * 15) + "deg) rotateX(" +
+      ((-(e.clientY - r.top) / r.height + 0.5) * 10) + "deg)";
+  });
+
+  heroRight.addEventListener("mouseleave", function () {
+    scene.style.transform = "";
+  });
+}
+</script>
