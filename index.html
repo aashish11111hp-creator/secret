@@ -235,13 +235,11 @@ window.addEventListener('load', function(){
     approveFromEmail(params.get('phone')); return;
   }
 
-  // Handle redirect back from check
+  // Handle redirect back from check - show download page directly
   if(params.get('status') === 'APPROVED'){
     localStorage.setItem(STORAGE_KEY, 'approved');
-    // Clean URL and show files
     window.history.replaceState({}, '', window.location.pathname);
-    openModal();
-    setTimeout(showStep4, 300);
+    showDownloadPage();
     return;
   }
 
@@ -250,6 +248,10 @@ window.addEventListener('load', function(){
     showAccessBanner();
   }
 });
+
+function showDownloadPage(){
+  document.body.innerHTML = "<div style='font-family:Georgia,serif;background:#0a0608;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;'><div style='max-width:400px;width:100%;background:#120d0f;border:1px solid rgba(201,146,42,0.3);border-radius:12px;padding:2rem;text-align:center;'><div style='font-size:3rem;margin-bottom:0.5rem;'>🎉</div><h2 style='color:#60bb46;margin-bottom:0.5rem;'>Payment Approved!</h2><p style='color:#9a8870;font-size:0.9rem;margin-bottom:1.5rem;'>Your files are ready to download</p><a href='" +  + PDF_URL +  + "' target='_blank' style='display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#c9922a,#a07020);color:#fff;text-decoration:none;font-size:1rem;font-weight:700;padding:14px;border-radius:6px;margin-bottom:12px;'>📖 Download E-Book (PDF)</a><div style='height:1px;background:rgba(201,146,42,0.15);margin:0.5rem 0 1rem;'></div><p style='color:#60bb46;font-size:0.8rem;margin-bottom:8px;'>🎧 Audio Version</p><a href='" +  + AUDIO_URL +  + "' target='_blank' style='display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#60bb46,#3d8f2a);color:#fff;text-decoration:none;font-size:1rem;font-weight:700;padding:14px;border-radius:6px;'>⬇️ Download Audio (MP3)</a><p style='color:#555;font-size:0.75rem;margin-top:1rem;'>✅ Both files are yours forever</p></div></div>";
+}
 
 function showAccessBanner(){
   const b = document.createElement('div');
