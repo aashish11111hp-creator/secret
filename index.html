@@ -229,9 +229,23 @@ const STORAGE_KEY = "ebook_access_v2";
 // On page load - check if already approved
 window.addEventListener('load', function(){
   const params = new URLSearchParams(window.location.search);
+
+  // Handle approve from email
   if(params.get('action') === 'approve'){
     approveFromEmail(params.get('phone')); return;
   }
+
+  // Handle redirect back from check
+  if(params.get('status') === 'APPROVED'){
+    localStorage.setItem(STORAGE_KEY, 'approved');
+    // Clean URL and show files
+    window.history.replaceState({}, '', window.location.pathname);
+    openModal();
+    setTimeout(showStep4, 300);
+    return;
+  }
+
+  // Returning user with saved access
   if(localStorage.getItem(STORAGE_KEY) === 'approved'){
     showAccessBanner();
   }
@@ -319,7 +333,6 @@ async function submitPayment(){
 
 function checkStatus(){
   const phoneVal = document.getElementById('checkPhone').value.trim();
-  const btn = document.getElementById('checkBtn');
   const err = document.getElementById('checkErr');
   err.style.display = 'none';
 
@@ -328,42 +341,12 @@ function checkStatus(){
     err.style.display = 'block'; return;
   }
 
-  btn.disabled = true;
-  btn.textContent = '⏳ Checking...';
+  // Save phone to localStorage before redirect
+  localStorage.setItem('check_phone', phoneVal);
 
-  // Use JSONP to bypass CORS
-  const callbackName = 'cb_' + Date.now();
-  const script = document.createElement('script');
-
-  window[callbackName] = function(data){
-    delete window[callbackName];
-    document.head.removeChild(script);
-    if(data.status === 'APPROVED'){
-      showStep4();
-    } else {
-      btn.disabled = false;
-      btn.textContent = '🔍 Check & Get My Files';
-    }
-  };
-
-  script.onerror = function(){
-    delete window[callbackName];
-    document.head.removeChild(script);
-    btn.disabled = false;
-    btn.textContent = '🔍 Check & Get My Files';
-  };
-
-  script.src = SCRIPT_URL + '?action=check&phone=' + encodeURIComponent(phoneVal) + '&callback=' + callbackName;
-  document.head.appendChild(script);
-
-  // Timeout after 10 seconds
-  setTimeout(function(){
-    if(window[callbackName]){
-      delete window[callbackName];
-      btn.disabled = false;
-      btn.textContent = '🔍 Check & Get My Files';
-    }
-  }, 10000);
+  // Redirect to Apps Script which redirects back with status
+  const redirectBack = encodeURIComponent('https://aashish11111hp-creator.github.io/secret/');
+  window.location.href = SCRIPT_URL + '?action=check&phone=' + encodeURIComponent(phoneVal) + '&redirect_back=' + redirectBack;
 }
 
 function downloadPDF(){ window.open("https://docs.google.com/document/d/1AHYvj5S0aEpIjQ3TphoBfTOdXQZB7UD9uW_PPT0pqqg/export?format=pdf","_blank"); }
