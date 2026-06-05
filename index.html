@@ -174,19 +174,20 @@ footer{border-top:1px solid rgba(201,146,42,.1);padding:2rem 5rem;display:flex;j
       <button class="btn-back" onclick="showStep1()">← Back to QR</button>
     </div>
 
-    <!-- STEP 3: PENDING -->
+        <!-- STEP 3: PENDING -->
     <div id="step3" style="display:none;">
       <div style="font-size:3rem;margin-bottom:.8rem;" class="pending-pulse">⏳</div>
       <div class="modal-title" style="color:var(--gold-light);">Payment Submitted!</div>
       <div class="modal-sub" style="margin-bottom:1rem;">Seller is verifying your payment</div>
       <div style="background:rgba(201,146,42,.08);border:1px solid rgba(201,146,42,.2);border-radius:8px;padding:14px;margin-bottom:1.2rem;font-size:.88rem;color:var(--muted);line-height:2.1;">
         ① Seller verifies your eSewa payment<br>
-        ② Seller approves your order<br>
-        ③ Click button below to get your files 🎉
+        ② Seller sends you an <b style="color:#fff;">Access Code</b><br>
+        ③ Enter the code below 🎉
       </div>
-      <input type="hidden" id="checkPhone">
+      <input class="inp" type="text" id="accessCode" placeholder="Enter Access Code" maxlength="10" oninput="this.value=this.value.toUpperCase()" style="letter-spacing:4px;font-size:1.2rem;text-align:center;">
       <div class="err" id="checkErr"></div>
-      <button class="btn-green" id="checkBtn" onclick="checkStatus()">🔍 Check &amp; Get My Files</button>
+      <button class="btn-green" id="checkBtn" onclick="checkCode()">🔓 Unlock My Files</button>
+      <input type="hidden" id="checkPhone">
     </div>
 
     <!-- STEP 4: SUCCESS -->
@@ -218,6 +219,19 @@ footer{border-top:1px solid rgba(201,146,42,.1);padding:2rem 5rem;display:flex;j
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzCEdWuVpFNquQKnyhEWVzD6XqYUPsoxW0rc9rZj3_T2-blHWvxD9HcOO7a9IThaWBOzg/exec";
 
+function getDailyCode(){
+  var d = new Date();
+  var dateStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var raw = dateStr + 'EBOOK2025AASHISH';
+  var hash = 0;
+  for(var i=0;i<raw.length;i++){ hash=((hash<<5)-hash)+raw.charCodeAt(i); hash|=0; }
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code=''; var h=Math.abs(hash);
+  for(var j=0;j<6;j++){ code+=chars[h%chars.length]; h=Math.floor(h/chars.length)+j*7+13; }
+  return code;
+}
+console.log('Today code:', getDailyCode());
+
 function openModal(){ document.getElementById('overlay').classList.add('active'); showStep1(); }
 function closeModal(){ document.getElementById('overlay').classList.remove('active'); }
 function closeOutside(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
@@ -229,85 +243,50 @@ function showStep3(){ hide('step1'); hide('step2'); show('step3'); hide('step4')
 function showStep4(){ hide('step1'); hide('step2'); hide('step3'); show('step4'); }
 
 function callScript(params, callback){
-  const cb = 'cb_' + Date.now();
-  const s  = document.createElement('script');
-  window[cb] = function(data){
-    delete window[cb];
-    if(document.head.contains(s)) document.head.removeChild(s);
-    callback(data);
-  };
-  s.onerror = function(){
-    delete window[cb];
-    if(document.head.contains(s)) document.head.removeChild(s);
-    callback({status:'ERROR'});
-  };
-  s.src = SCRIPT_URL + '?' + params + '&callback=' + cb;
+  var cb='cb_'+Date.now(); var s=document.createElement('script');
+  window[cb]=function(data){ delete window[cb]; if(document.head.contains(s)) document.head.removeChild(s); callback(data); };
+  s.onerror=function(){ delete window[cb]; callback({status:'ERROR'}); };
+  s.src=SCRIPT_URL+'?'+params+'&callback='+cb;
   document.head.appendChild(s);
-  setTimeout(function(){ if(window[cb]){ window[cb]({status:'TIMEOUT'}); } }, 10000);
+  setTimeout(function(){ if(window[cb]){ window[cb]({status:'TIMEOUT'}); }},10000);
 }
 
 function submitPayment(){
-  const phone = document.getElementById('phoneInput').value.trim();
-  const txn   = document.getElementById('txnInput').value.trim().toUpperCase();
-  const err   = document.getElementById('submitErr');
-  const btn   = document.getElementById('submitBtn');
-  err.style.display = 'none';
-
-  if(!/^9[6-9][0-9]{8}$/.test(phone)){
-    err.textContent = '❌ Valid eSewa number halnus (98XXXXXXXX)';
-    err.style.display = 'block'; return;
-  }
-  if(txn.length < 5){
-    err.textContent = '❌ Valid Transaction ID halnus';
-    err.style.display = 'block'; return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Submitting...';
-
-  callScript('action=submit&phone=' + encodeURIComponent(phone) + '&txn=' + encodeURIComponent(txn) + '&amount=10', function(data){
-    btn.disabled = false;
-    btn.textContent = '📤 Submit for Verification';
-    if(data.status === 'APPROVED'){
-      showStep4();
-    } else {
-      document.getElementById('checkPhone').value = phone;
-      showStep3();
-    }
+  var phone=document.getElementById('phoneInput').value.trim();
+  var txn=document.getElementById('txnInput').value.trim().toUpperCase();
+  var err=document.getElementById('submitErr');
+  var btn=document.getElementById('submitBtn');
+  err.style.display='none';
+  if(!/^9[6-9][0-9]{8}$/.test(phone)){ err.textContent='❌ Valid eSewa number halnus'; err.style.display='block'; return; }
+  if(txn.length<5){ err.textContent='❌ Valid Transaction ID halnus'; err.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='Submitting...';
+  callScript('action=submit&phone='+encodeURIComponent(phone)+'&txn='+encodeURIComponent(txn)+'&amount=10', function(data){
+    btn.disabled=false; btn.textContent='📤 Submit for Verification';
+    document.getElementById('checkPhone').value=phone;
+    showStep3();
   });
 }
 
-function checkStatus(){
-  const phone = document.getElementById('checkPhone').value.trim();
-  const btn   = document.getElementById('checkBtn');
-  const err   = document.getElementById('checkErr');
-  err.style.display = 'none';
-  btn.disabled = true;
-  btn.textContent = '⏳ Opening your files...';
-
-  callScript('action=check&phone=' + encodeURIComponent(phone), function(data){
-    if(data.status === 'APPROVED'){
-      showStep4();
-    } else {
-      btn.disabled = false;
-      btn.textContent = '🔍 Check & Get My Files';
-      err.textContent = '⏳ Not approved yet. Please wait for seller approval.';
-      err.style.display = 'block';
-    }
-  });
+function checkCode(){
+  var entered=document.getElementById('accessCode').value.trim().toUpperCase();
+  var err=document.getElementById('checkErr');
+  err.style.display='none';
+  if(!entered){ err.textContent='❌ Access code halnus'; err.style.display='block'; return; }
+  if(entered===getDailyCode()){ showStep4(); }
+  else { err.textContent='❌ Wrong code. Seller bata linus.'; err.style.display='block'; }
 }
 
 function downloadPDF(){ window.open("https://docs.google.com/document/d/1AHYvj5S0aEpIjQ3TphoBfTOdXQZB7UD9uW_PPT0pqqg/export?format=pdf","_blank"); }
 function downloadAudio(){ window.open("https://www.dropbox.com/scl/fi/vs6f38hvqh24w1we1axx6/8-Female-Psychology.mp3?rlkey=l37o7re1sig5hfu1ysjkgcx7c&st=l5i9jvjv&dl=1","_blank"); }
 
-const heroRight = document.querySelector('.hero-right');
-const scene = document.querySelector('.scene');
-if(heroRight && scene){
-  heroRight.addEventListener('mousemove', e => {
-    const r = heroRight.getBoundingClientRect();
-    scene.style.transform = 'rotateY('+((e.clientX-r.left)/r.width-.5)*15+'deg) rotateX('+(-(e.clientY-r.top)/r.height+.5)*10+'deg)';
+var heroRight=document.querySelector('.hero-right');
+var scene=document.querySelector('.scene');
+if(heroRight&&scene){
+  heroRight.addEventListener('mousemove',function(e){
+    var r=heroRight.getBoundingClientRect();
+    scene.style.transform='rotateY('+((e.clientX-r.left)/r.width-.5)*15+'deg) rotateX('+(-(e.clientY-r.top)/r.height+.5)*10+'deg)';
   });
-  heroRight.addEventListener('mouseleave', () => { scene.style.transform=''; });
+  heroRight.addEventListener('mouseleave',function(){ scene.style.transform=''; });
 }
 </script>
 </body>
