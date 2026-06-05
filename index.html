@@ -180,11 +180,11 @@ footer{border-top:1px solid rgba(201,146,42,.1);padding:2rem 5rem;display:flex;j
       <div class="modal-title" style="color:var(--gold-light);">Payment Submitted!</div>
       <div class="modal-sub" style="margin-bottom:1rem;">Seller is verifying your payment</div>
       <div style="background:rgba(201,146,42,.08);border:1px solid rgba(201,146,42,.2);border-radius:8px;padding:14px;margin-bottom:1.2rem;font-size:.88rem;color:var(--muted);line-height:2.1;">
-        ① Seller checks eSewa app<br>
-        ② Seller ticks ☑ checkbox<br>
-        ③ Enter phone below &amp; click Check
+        ① Seller verifies your eSewa payment<br>
+        ② Seller approves your order<br>
+        ③ Click button below to get your files 🎉
       </div>
-      <input class="inp" type="tel" id="checkPhone" placeholder="Your eSewa Number" maxlength="10">
+      <input type="hidden" id="checkPhone">
       <div class="err" id="checkErr"></div>
       <button class="btn-green" id="checkBtn" onclick="checkStatus()">🔍 Check &amp; Get My Files</button>
     </div>
@@ -282,14 +282,8 @@ function checkStatus(){
   const btn   = document.getElementById('checkBtn');
   const err   = document.getElementById('checkErr');
   err.style.display = 'none';
-
-  if(!/^9[6-9][0-9]{8}$/.test(phone)){
-    err.textContent = '❌ Valid eSewa number halnus (98XXXXXXXX)';
-    err.style.display = 'block'; return;
-  }
-
   btn.disabled = true;
-  btn.textContent = '⏳ Checking...';
+  btn.textContent = '⏳ Opening your files...';
 
   callScript('action=check&phone=' + encodeURIComponent(phone), function(data){
     if(data.status === 'APPROVED'){
@@ -297,6 +291,8 @@ function checkStatus(){
     } else {
       btn.disabled = false;
       btn.textContent = '🔍 Check & Get My Files';
+      err.textContent = '⏳ Not approved yet. Please wait for seller approval.';
+      err.style.display = 'block';
     }
   });
 }
